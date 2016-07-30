@@ -66,8 +66,8 @@ function love.load()
   visibleTilesWidth = 15
   visibleTilesHeight = 11
   
-  cameraX = 0
-  cameraY = 0
+  cameraX = 1
+  cameraY = 1
   
   map = {}
   for x = 1, mapWidth do
@@ -95,8 +95,8 @@ function love.load()
   groundItems[2][3] = 1
   
   player = {
-    x = 0,
-    y = 0,
+    x = 1,
+    y = 1,
     moveCooldown = 0.2, -- In seconds
     moveTimer = 0,
     img = love.graphics.newImage("assets/player.png"),
@@ -123,9 +123,9 @@ end
 function checkCollision(xOff, yOff)
   xOff = xOff or 0
   yOff = yOff or 0
-  local o = objects[player.x+xOff+1]
+  local o = objects[player.x+xOff]
   if o ~= nil then
-    o = o[player.y+yOff+1]
+    o = o[player.y+yOff]
     if o ~= nil and o > 0 then
       return true
     else
@@ -147,11 +147,11 @@ function love.update(dt)
   if player.moveTimer >= player.moveCooldown and not player.breakMode then
     if love.keyboard.isDown("up") and not checkCollision(0, -1) then
       player.y = player.y - 1
-      if player.y < 0 then player.y = 0 end
+      if player.y < 1 then player.y = 1 end
       
       if playerYOffset <= 5 then cameraY = cameraY - 1 end
-      if cameraY < 0 then
-        cameraY = 0
+      if cameraY < 1 then
+        cameraY = 1
       end
       
       player.moveTimer = 0
@@ -159,11 +159,11 @@ function love.update(dt)
     
     if love.keyboard.isDown("right") and not checkCollision(1, 0) then
       player.x = player.x + 1
-      if player.x >= mapWidth then player.x = mapWidth-1 end
+      if player.x > mapWidth then player.x = mapWidth end
       
       if playerXOffset >= 7 then cameraX = cameraX + 1 end
-      if cameraX > mapWidth - visibleTilesWidth then
-        cameraX = mapWidth - visibleTilesWidth
+      if cameraX > mapWidth+1 - visibleTilesWidth then
+        cameraX = mapWidth+1 - visibleTilesWidth
       end
       
       player.moveTimer = 0
@@ -171,11 +171,11 @@ function love.update(dt)
     
     if love.keyboard.isDown("down") and not checkCollision(0, 1) then
       player.y = player.y + 1
-      if player.y >= mapHeight then player.y = mapHeight-1 end
+      if player.y > mapHeight then player.y = mapHeight end
       
       if playerYOffset >= 5 then cameraY = cameraY + 1 end
-      if cameraY > mapHeight - visibleTilesHeight then
-        cameraY = mapHeight - visibleTilesHeight
+      if cameraY > mapHeight+1 - visibleTilesHeight then
+        cameraY = mapHeight+1 - visibleTilesHeight
       end
       
       player.moveTimer = 0
@@ -183,11 +183,11 @@ function love.update(dt)
     
     if love.keyboard.isDown("left") and not checkCollision(-1, 0) then
       player.x = player.x - 1
-      if player.x < 0 then player.x = 0 end
+      if player.x < 1 then player.x = 1 end
       
       if playerXOffset <= 7 then cameraX = cameraX - 1 end
-      if cameraX < 0 then
-        cameraX = 0
+      if cameraX < 1 then
+        cameraX = 1
       end
       
       player.moveTimer = 0
@@ -195,7 +195,7 @@ function love.update(dt)
   end
   
   -- See if there is an item to pick up
-  local item = groundItems[player.x+1][player.y+1]
+  local item = groundItems[player.x][player.y]
   if item > 0 then
     local firstSame, firstEmpty = 0, 0
     -- Find the next empty slot
@@ -209,12 +209,12 @@ function love.update(dt)
       
     if firstSame > 0 then
       player.inventory[firstSame].count = player.inventory[firstSame].count + 1
-      groundItems[player.x+1][player.y+1] = 0
+      groundItems[player.x][player.y] = 0
     elseif firstEmpty > 0 then
       local slot = player.inventory[firstEmpty]
       slot.id = item
       slot.count = 1
-      groundItems[player.x+1][player.y+1] = 0
+      groundItems[player.x][player.y] = 0
     end
   end
     
@@ -233,30 +233,30 @@ function love.update(dt)
   if player.breakMode then
     local bx, by = 0
     
-    if love.keyboard.isDown("up") and player.y > 0 then
+    if love.keyboard.isDown("up") and player.y > 1 then
+      bx = player.x
+      by = player.y-1
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
+    end
+    
+    if love.keyboard.isDown("right") and player.x < mapWidth then
       bx = player.x+1
       by = player.y
       objects[bx][by] = 0
       groundItems[bx][by] = 2
     end
     
-    if love.keyboard.isDown("right") and player.x < mapWidth - 1 then
-      bx = player.x+2
-      by = player.y+1
-      objects[bx][by] = 0
-      groundItems[bx][by] = 2
-    end
-    
-    if love.keyboard.isDown("down") and player.y < mapHeight - 1 then
-      bx = player.x+1
-      by = player.y+2
-      objects[bx][by] = 0
-      groundItems[bx][by] = 2
-    end
-    
-    if love.keyboard.isDown("left") and player.x > 0 then
+    if love.keyboard.isDown("down") and player.y < mapHeight then
       bx = player.x
       by = player.y+1
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
+    end
+    
+    if love.keyboard.isDown("left") and player.x > 1 then
+      bx = player.x-1
+      by = player.y
       objects[bx][by] = 0
       groundItems[bx][by] = 2
     end
@@ -275,16 +275,16 @@ function love.draw()
   for x = 1, visibleTilesWidth do
     for y = 1, visibleTilesHeight do
       -- Draw background
-      love.graphics.draw(tilesetImage, bgTiles[map[x+cameraX][y+cameraY]], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+      love.graphics.draw(tilesetImage, bgTiles[map[x+(cameraX-1)][y+(cameraY-1)]], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       
       -- Draw objects
-      object = objects[x+cameraX][y+cameraY]
+      object = objects[x+(cameraX-1)][y+(cameraY-1)]
       if object > 0 then
         love.graphics.draw(tilesetImage, obTiles[object], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       end
       
       -- Draw items
-      item = groundItems[x+cameraX][y+cameraY]
+      item = groundItems[x+(cameraX-1)][y+(cameraY-1)]
       if item > 0 then
         love.graphics.draw(itemSheet, items[item], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       end
@@ -292,7 +292,7 @@ function love.draw()
   end
   
   -- Draw player
-  love.graphics.draw(player.img, (player.x-cameraX) * tileDisplaySize, (player.y-cameraY) * tileDisplaySize, 0, tileScale, tileScale)
+  love.graphics.draw(player.img, (player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize, 0, tileScale, tileScale)
   
   if player.breakMode then
     -- Draw break halo
