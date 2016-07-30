@@ -6,5 +6,5 @@ function love.conf(t)
   t.window.height = 704
   
   -- Enable console
-  t.console = false
+  t.console = true
 end

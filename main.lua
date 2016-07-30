@@ -106,7 +106,7 @@ function love.load()
   }
   
   for i = 1, 5 do
-    player.inventory[i] = 0
+    player.inventory[i] = { id = 0, count = 0 }
   end
 end
 
@@ -195,14 +195,26 @@ function love.update(dt)
   end
   
   -- See if there is an item to pick up
-  if groundItems[player.x+1][player.y+1] > 0 then
+  local item = groundItems[player.x+1][player.y+1]
+  if item > 0 then
+    local firstSame, firstEmpty = 0, 0
     -- Find the next empty slot
     for k,v in ipairs(player.inventory) do
-      if v == 0 then
-        player.inventory[k] = groundItems[player.x+1][player.y+1]
-        groundItems[player.x+1][player.y+1] = 0
-        break
+      if v.id == item then
+        firstSame = k
+      elseif v.id == 0 and firstEmpty == 0 then
+        firstEmpty = k
       end
+    end
+      
+    if firstSame > 0 then
+      player.inventory[firstSame].count = player.inventory[firstSame].count + 1
+      groundItems[player.x+1][player.y+1] = 0
+    elseif firstEmpty > 0 then
+      local slot = player.inventory[firstEmpty]
+      slot.id = item
+      slot.count = 1
+      groundItems[player.x+1][player.y+1] = 0
     end
   end
     
@@ -302,9 +314,9 @@ function love.draw()
       love.graphics.setColor(180, 180, 180, 200)
       love.graphics.rectangle("fill", sx, sy, invSize, invSize)
       love.graphics.setColor(255, 255, 255)
-      local item = player.inventory[i]
-      if item > 0 then
-        love.graphics.draw(itemSheet, items[item], sx+3, sy+3, 0, tileScale, tileScale)
+      local slot = player.inventory[i]
+      if slot.id > 0 then
+        love.graphics.draw(itemSheet, items[slot.id], sx+3, sy+3, 0, tileScale, tileScale)
       end
     end
   end
@@ -313,12 +325,8 @@ function love.draw()
   love.graphics.print("PX: " .. player.x .. " PY: " .. player.y .. " SX: " .. cameraX .. " SY: " .. cameraY, 10, 10)
   
   local inv = "Inventory: "
-  if (#player.inventory > 0) then
-    for i,v in ipairs(player.inventory) do
-      inv = inv .. i .. "[" .. v .. "] "
-    end
-  else
-    inv = inv .. "Empty"
+  for i,v in ipairs(player.inventory) do
+    inv = inv .. i .. "[" .. v.id .. " x " .. v.count .. "] "
   end
   love.graphics.print(inv, 10, 40)
 end
