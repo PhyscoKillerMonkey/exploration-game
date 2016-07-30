@@ -5,20 +5,26 @@ function love.load()
   -- Set the font
   love.graphics.setNewFont(20)
   
-  -- Load the tilesheet
+  -- Load the tilesheets
   tilesetImage = love.graphics.newImage("assets/medievalTileset.png")
+  itemSheet = love.graphics.newImage("assets/items.png")
   tileSize = 16
   
   -- Background tiles
   bgTiles = {}
-  bgTiles[1] = getQuad(1, 1)
-  bgTiles[2] = getQuad(3, 0)
-  bgTiles[3] = getQuad(3, 1)
+  bgTiles[1] = getQuad(1, 1, tilesetImage)
+  bgTiles[2] = getQuad(3, 0, tilesetImage)
+  bgTiles[3] = getQuad(3, 1, tilesetImage)
   
-  -- Obstacles
+  -- Objects
   obTiles = {}
-  obTiles[1] = getQuad(13, 5)
-  obTiles[2] = getQuad(9, 7)
+  obTiles[1] = getQuad(13, 5, tilesetImage)
+  obTiles[2] = getQuad(9, 7, tilesetImage)
+  
+  -- Items
+  items = {}
+  items[1] = getQuad(0, 0, itemSheet)
+  items[2] = getQuad(1, 0, itemSheet)
   
   -- Initalise the map
   mapWidth = 60
@@ -40,38 +46,48 @@ function love.load()
     end
   end
   
-  obstacles = {}
+  objects = {}
   for x = 1, mapWidth do
-    obstacles[x] = {}
+    objects[x] = {}
     for y = 1, mapHeight do
-      obstacles[x][y] = love.math.random(-10, #obTiles)
+      objects[x][y] = love.math.random(-10, #obTiles)
     end
   end
+  
+  groundItems = {}
+  for x = 1, mapWidth do
+    groundItems[x] = {}
+    for y = 1, mapHeight do
+      groundItems[x][y] = 0
+    end
+  end
+  groundItems[2][3] = 1
   
   player = {
     x = 0,
     y = 0,
     moveCooldown = 0.2, -- In seconds
-    moveTimer = 10000000,
+    moveTimer = 0,
     img = love.graphics.newImage("assets/player.png"),
-    breakMode = false
+    breakMode = false,
+    inventory = {}
   }
 end
 
-function getQuad(x, y)
+function getQuad(x, y, image)
   return love.graphics.newQuad(
     x * tileSize,
     y * tileSize,
     tileSize,
     tileSize,
-    tilesetImage:getWidth(),
-    tilesetImage:getHeight())
+    image:getWidth(),
+    image:getHeight())
 end
 
 function checkCollision(xOff, yOff)
   xOff = xOff or 0
   yOff = yOff or 0
-  local o = obstacles[player.x+xOff+1]
+  local o = objects[player.x+xOff+1]
   if o ~= nil then
     o = o[player.y+yOff+1]
     if o ~= nil and o > 0 then
@@ -141,6 +157,12 @@ function love.update(dt)
       player.moveTimer = 0
     end
   end
+  
+  -- See if there is an item to pick up
+  if groundItems[player.x+1][player.y+1] > 0 then
+    table.insert(player.inventory, groundItems[player.x+1][player.y+1])
+    groundItems[player.x+1][player.y+1] = 0
+  end
     
   -- Check if in break mode
   if love.keyboard.isDown("x") then
@@ -150,20 +172,34 @@ function love.update(dt)
   end
   
   if player.breakMode then
+    local bx, by = 0
+    
     if love.keyboard.isDown("up") and player.y > 0 then
-      obstacles[player.x+1][player.y] = 0
+      bx = player.x+1
+      by = player.y
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
     end
     
     if love.keyboard.isDown("right") and player.x < mapWidth - 1 then
-      obstacles[player.x+2][player.y+1] = 0
+      bx = player.x+2
+      by = player.y+1
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
     end
     
     if love.keyboard.isDown("down") and player.y < mapHeight - 1 then
-      obstacles[player.x+1][player.y+2] = 0
+      bx = player.x+1
+      by = player.y+2
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
     end
     
     if love.keyboard.isDown("left") and player.x > 0 then
-      obstacles[player.x][player.y+1] = 0
+      bx = player.x
+      by = player.y+1
+      objects[bx][by] = 0
+      groundItems[bx][by] = 2
     end
   end
 
@@ -179,10 +215,16 @@ function love.draw()
       -- Draw background
       love.graphics.draw(tilesetImage, bgTiles[map[x+cameraX][y+cameraY]], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       
-      -- Draw obstacles
-      obstacle = obstacles[x+cameraX][y+cameraY]
-      if obstacle > 0 then
-        love.graphics.draw(tilesetImage, obTiles[obstacle], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+      -- Draw objects
+      object = objects[x+cameraX][y+cameraY]
+      if object > 0 then
+        love.graphics.draw(tilesetImage, obTiles[object], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+      end
+      
+      -- Draw items
+      item = groundItems[x+cameraX][y+cameraY]
+      if item > 0 then
+        love.graphics.draw(itemSheet, items[item], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       end
     end
   end
@@ -200,4 +242,14 @@ function love.draw()
   
   -- Write debug text
   love.graphics.print("PX: " .. player.x .. " PY: " .. player.y .. " SX: " .. cameraX .. " SY: " .. cameraY, 10, 10)
+  
+  local inv = "Inventory: "
+  if (#player.inventory > 0) then
+    for i,v in ipairs(player.inventory) do
+      inv = inv .. i .. "[" .. v .. "] "
+    end
+  else
+    inv = inv .. "Empty"
+  end
+  love.graphics.print(inv, 10, 40)
 end
