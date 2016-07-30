@@ -1,3 +1,34 @@
+-- KeyPressed and released detection
+love.keyboard.keysPressed = {}
+love.keyboard.keysReleased = {}
+
+function love.keyboard.wasPressed(key)
+  if love.keyboard.keysPressed[key] then
+    return true
+  end
+  return false
+end
+
+function love.keyboard.wasReleased(key)
+  if love.keyboard.keysReleased[key] then
+    return true
+  end
+  return false
+end
+
+function love.keypressed(key, scancode, isrepeat)
+  love.keyboard.keysPressed[key] = true
+end
+
+function love.keyreleased(key)
+  love.keyboard.keysReleased[key] = false
+end
+
+function love.keyboard.updateKeys()
+  love.keyboard.keysPressed = {}
+  love.keyboard.keysReleased = {}
+end
+
 function love.load()
   -- Keeps everything nice and pixely
   love.graphics.setDefaultFilter("nearest")
@@ -70,8 +101,13 @@ function love.load()
     moveTimer = 0,
     img = love.graphics.newImage("assets/player.png"),
     breakMode = false,
+    invOpen = false,
     inventory = {}
   }
+  
+  for i = 1, 5 do
+    player.inventory[i] = 0
+  end
 end
 
 function getQuad(x, y, image)
@@ -160,8 +196,14 @@ function love.update(dt)
   
   -- See if there is an item to pick up
   if groundItems[player.x+1][player.y+1] > 0 then
-    table.insert(player.inventory, groundItems[player.x+1][player.y+1])
-    groundItems[player.x+1][player.y+1] = 0
+    -- Find the next empty slot
+    for k,v in ipairs(player.inventory) do
+      if v == 0 then
+        player.inventory[k] = groundItems[player.x+1][player.y+1]
+        groundItems[player.x+1][player.y+1] = 0
+        break
+      end
+    end
   end
     
   -- Check if in break mode
@@ -169,6 +211,11 @@ function love.update(dt)
     player.breakMode = true
   else
     player.breakMode = false 
+  end
+  
+  -- Toggle inventory
+  if love.keyboard.wasPressed("z") then
+    player.invOpen = not player.invOpen
   end
   
   if player.breakMode then
@@ -205,6 +252,9 @@ function love.update(dt)
 
   -- Update the player move timer
   player.moveTimer = player.moveTimer + dt
+  
+  -- Reset the key pressed/released lists
+  love.keyboard.updateKeys()
 end
 
 function love.draw()
@@ -238,6 +288,25 @@ function love.draw()
     love.graphics.rectangle("line", (player.x-cameraX+1) * tileDisplaySize, (player.y-cameraY) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
     love.graphics.rectangle("line", (player.x-cameraX) * tileDisplaySize, (player.y-cameraY+1) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
     love.graphics.rectangle("line", (player.x-cameraX-1) * tileDisplaySize, (player.y-cameraY) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
+  end
+  
+  if player.invOpen then
+    -- Draw the inventory
+    local invXOff = 200
+    local invYOff = 200
+    local invSize = 70
+    local invMargin = 10
+    for i = 1, 5 do
+      local sx = invXOff + (i-1) * (invSize + invMargin)
+      local sy = invYOff
+      love.graphics.setColor(180, 180, 180, 200)
+      love.graphics.rectangle("fill", sx, sy, invSize, invSize)
+      love.graphics.setColor(255, 255, 255)
+      local item = player.inventory[i]
+      if item > 0 then
+        love.graphics.draw(itemSheet, items[item], sx+3, sy+3, 0, tileScale, tileScale)
+      end
+    end
   end
   
   -- Write debug text
