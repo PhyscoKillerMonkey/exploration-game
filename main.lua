@@ -306,8 +306,10 @@ function love.draw()
     -- Draw the inventory
     local invXOff = 200
     local invYOff = 200
-    local invSize = 70
-    local invMargin = 10
+    local invSize = 72
+    local invPadding = (invSize - tileDisplaySize) / 2
+    
+    local invMargin = 12
     for i = 1, 5 do
       local sx = invXOff + (i-1) * (invSize + invMargin)
       local sy = invYOff
@@ -316,7 +318,7 @@ function love.draw()
       love.graphics.setColor(255, 255, 255)
       local slot = player.inventory[i]
       if slot.id > 0 then
-        love.graphics.draw(itemSheet, items[slot.id], sx+3, sy+3, 0, tileScale, tileScale)
+        love.graphics.draw(itemSheet, items[slot.id], sx+invPadding, sy+invPadding, 0, tileScale, tileScale)
       end
     end
   end
