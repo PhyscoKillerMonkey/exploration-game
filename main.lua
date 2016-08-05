@@ -37,7 +37,7 @@ function love.load()
   love.graphics.setNewFont(20)
   
   -- Load the tilesheets
-  tilesetImage = love.graphics.newImage("assets/medievalTileset.png")
+  tilesetImage = love.graphics.newImage("assets/medievalSpritesheet.png")
   itemSheet = love.graphics.newImage("assets/items.png")
   tileSize = 16
   
