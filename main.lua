@@ -37,20 +37,23 @@ function love.load()
   love.graphics.setNewFont(20)
   
   -- Load the tilesheets
-  tilesetImage = love.graphics.newImage("assets/medievalSpritesheet.png")
+  tileSheet = love.graphics.newImage("assets/tiles.png")
   itemSheet = love.graphics.newImage("assets/items.png")
   tileSize = 16
   
   -- Background tiles
   bgTiles = {}
-  bgTiles[1] = getQuad(1, 1, tilesetImage)
-  bgTiles[2] = getQuad(3, 0, tilesetImage)
-  bgTiles[3] = getQuad(3, 1, tilesetImage)
+  bgTiles[1] = getQuad(0, 0, tileSheet)
+  bgTiles[2] = getQuad(1, 0, tileSheet)
+  bgTiles[3] = getQuad(2, 0, tileSheet)
+  bgTiles[4] = getQuad(3, 0, tileSheet)
+  bgTiles[5] = getQuad(4, 0, tileSheet)
+  bgTiles[6] = getQuad(5, 0, tileSheet)
   
   -- Objects
   obTiles = {}
-  obTiles[1] = getQuad(13, 5, tilesetImage)
-  obTiles[2] = getQuad(9, 7, tilesetImage)
+  obTiles[1] = getQuad(0, 2, tileSheet)
+  --obTiles[2] = getQuad(1, 2, tileSheet)
   
   -- Items
   items = {}
@@ -100,10 +103,12 @@ function love.load()
     moveCooldown = 0.2, -- In seconds
     moveTimer = 0,
     img = love.graphics.newImage("assets/player.png"),
+    quad = nil,
     breakMode = false,
     invOpen = false,
     inventory = {}
   }
+  player.quad = getQuad(0, 0, player.img)
   
   for i = 1, 5 do
     player.inventory[i] = { id = 0, count = 0 }
@@ -275,12 +280,12 @@ function love.draw()
   for x = 1, visibleTilesWidth do
     for y = 1, visibleTilesHeight do
       -- Draw background
-      love.graphics.draw(tilesetImage, bgTiles[map[x+(cameraX-1)][y+(cameraY-1)]], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+      love.graphics.draw(tileSheet, bgTiles[map[x+(cameraX-1)][y+(cameraY-1)]], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       
       -- Draw objects
       object = objects[x+(cameraX-1)][y+(cameraY-1)]
       if object > 0 then
-        love.graphics.draw(tilesetImage, obTiles[object], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+        love.graphics.draw(tileSheet, obTiles[object], (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
       end
       
       -- Draw items
@@ -292,7 +297,7 @@ function love.draw()
   end
   
   -- Draw player
-  love.graphics.draw(player.img, (player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize, 0, tileScale, tileScale)
+  love.graphics.draw(player.img, player.quad, (player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize, 0, tileScale, tileScale)
   
   if player.breakMode then
     -- Draw break halo
