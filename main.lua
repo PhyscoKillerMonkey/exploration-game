@@ -176,7 +176,7 @@ function love.load()
   player.quad = getQuad(0, 0, player.img)
   
   for i = 1, 5 do
-    player.inventory[i] = { name = "", count = 0 }
+    player.inventory[i] = { item = nil, count = 0 }
   end
 end
 
@@ -275,9 +275,9 @@ function love.update(dt)
     local firstSame, firstEmpty = 0, 0
     -- Loop through the inventory finding the first occurance of this item and first empty slot
     for slot, v in ipairs(player.inventory) do
-      if v.name == item.name and firstSame == 0 then
+      if v.item and v.item.name == item.name and firstSame == 0 then
         firstSame = slot
-      elseif v.name == "" and firstEmpty == 0 then
+      elseif v.item == nil and firstEmpty == 0 then
         firstEmpty = slot
       end
     end
@@ -289,7 +289,7 @@ function love.update(dt)
     elseif firstEmpty > 0 then
       -- Else put it in the first empty slot and remove from the floor
       local slot = player.inventory[firstEmpty]
-      slot.name = item.name
+      slot.item = item
       slot.count = 1
       table.remove(square.items, #square.items)
     end
@@ -399,9 +399,9 @@ function love.draw()
       love.graphics.setColor(180, 180, 180, 200)
       love.graphics.rectangle("fill", sx, sy, invSize, invSize)
       love.graphics.setColor(255, 255, 255)
-      local slot = player.inventory[i]
-      if slot.id > 0 then
-        love.graphics.draw(itemSheet, items[slot.id], sx+invPadding, sy+invPadding, 0, tileScale, tileScale)
+      local item = player.inventory[i].item
+      if item then
+        love.graphics.draw(item.sprite.sheet, item.sprite.quad, sx+invPadding, sy+invPadding, 0, tileScale, tileScale)
       end
     end
   end
@@ -411,7 +411,11 @@ function love.draw()
   
   local inv = "Inventory: "
   for i,v in ipairs(player.inventory) do
-    inv = inv .. i .. "[" .. v.name .. " x " .. v.count .. "] "
+    if v.item then
+      inv = inv .. i .. "[" .. v.item.name .. " x " .. v.count .. "] "
+    else
+      inv = inv .. i .. "[" .. "Empty] "
+    end
   end
   love.graphics.print(inv, 10, 40)
 end
