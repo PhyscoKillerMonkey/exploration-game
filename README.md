@@ -2,10 +2,10 @@
 Some little experiments with the [Love2D](https://love2d.org) game framework.
 
 # To-do
-- Numbers in inventory (Needs polish)
-- Classes for items/blocks
+- ~~Numbers in inventory~~ (Needs polish)
+- ~~Classes for items/blocks~~
 - Movement/scrolling should be smooth
-- Character animations and facing
+- ~~Character animations~~ and facing
 - Crafting system
 
 # Ideas

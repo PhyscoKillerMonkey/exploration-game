@@ -68,36 +68,83 @@ end
 
 
 -- Class stuff
-Sprite = { sheet = nil, quad = nil }
-function Sprite:new(offX, offY, sheet)
-  o = { sheet = sheet, quad = getQuad(offX, offY, sheet) }
-  setmetatable(o, self)
-  self.__index = self
-  return o
+function createClass(class, parent)
+  class.__index = class
+  parent = parent or child
+  setmetatable(class, {
+    __index = parent,
+    __call = function (cls, ...)
+      local self = setmetatable({}, cls)
+      self:new(...)
+      return self
+    end
+  })
 end
 
-Tile = { x = nil, y = nil, background = nil, object = nil, items = {} }
+local Sprite = {}
+createClass(Sprite)
+function Sprite:new(x, y, sheet)
+  self.sheet = sheet
+  self.quad = getQuad(x, y, sheet)
+end
+function Sprite:draw(x, y)
+  love.graphics.draw(self.sheet, self.quad, x, y, 0, tileScale, tileScale)
+end
+
+local AnimatedSprite = {}
+createClass(AnimatedSprite, Sprite)
+function AnimatedSprite:new(x, y, sheet)
+  Sprite:new(x, y, sheet)
+  self.frameTimer = 0
+  self.frameDuration = 0.5
+  self.currentAnimation = ""
+  self.animationNames = {}
+  self.animations = {}
+end
+function AnimatedSprite:addAnimation(name, frames)
+  table.insert(self.animationNames, name)
+  self.animations[name] = {}
+  for i, v in ipairs(frames) do
+    table.insert(self.animations[name], getQuad(v[1], v[2], self.sheet))
+  end
+end
+function AnimatedSprite:updateFrame(dt)
+  if self.currentAnimation ~= "" then
+    self.frameTimer = self.frameTimer + dt
+    local a = self.animations[self.currentAnimation]
+    if self.frameTimer > self.frameDuration * #a then
+      self.frameTimer = 0.0001 -- Cant be 0 cause division by 0
+    end
+    local frame = math.ceil(self.frameTimer / self.frameDuration)
+    self.quad = a[frame]
+  else
+    print("No animation assigned")
+  end
+end
+
+Tile = {}
+createClass(Tile)
 function Tile:new(x, y, background)
-  o = { x = x, y = y, background = background, items = {} }
-  setmetatable(o, self)
-  self.__index = self
-  return o
+  self.x = x
+  self.y = y
+  self.background = background
+  self.object = nil
+  self.items = {}
 end
 
-Object = { sprite = nil, onBreak = nil, blocking = false }
+Object = {}
+createClass(Object)
 function Object:new(sprite, onBreak, blocking)
-  o = { sprite = sprite, onBreak = onBreak, blocking = blocking }
-  setmetatable(o, self)
-  self.__index = self
-  return o
+  self.sprite = sprite
+  self.onBreak = onBreak
+  self.blocking = blocking
 end
 
-Item = { sprite = nil, name = "unNamed" }
+Item = {}
+createClass(Item)
 function Item:new(sprite, name)
-  o = { sprite = sprite, name = name }
-  setmetatable(o, self)
-  self.__index = self
-  return o
+  self.sprite = sprite
+  self.name = name
 end
 
 
@@ -112,25 +159,26 @@ function love.load()
   -- Load the tilesheets
   tileSheet = love.graphics.newImage("assets/tiles.png")
   itemSheet = love.graphics.newImage("assets/items.png")
+  playerSheet = love.graphics.newImage("assets/player.png")
   tileSize = 16
 
   -- Background tiles
   bgTiles = {}
-  bgTiles[1] = Sprite:new(0, 0, tileSheet)
-  bgTiles[2] = Sprite:new(1, 0, tileSheet)
-  bgTiles[3] = Sprite:new(2, 0, tileSheet)
-  bgTiles[4] = Sprite:new(3, 0, tileSheet)
-  bgTiles[5] = Sprite:new(4, 0, tileSheet)
-  bgTiles[6] = Sprite:new(5, 0, tileSheet)
+  bgTiles[1] = Sprite(0, 0, tileSheet)
+  bgTiles[2] = Sprite(1, 0, tileSheet)
+  bgTiles[3] = Sprite(2, 0, tileSheet)
+  bgTiles[4] = Sprite(3, 0, tileSheet)
+  bgTiles[5] = Sprite(4, 0, tileSheet)
+  bgTiles[6] = Sprite(5, 0, tileSheet)
 
   -- Items
   items = {}
-  items[1] = Item:new(Sprite:new(0, 0, itemSheet), "Stick")
-  items[2] = Item:new(Sprite:new(1, 0, itemSheet), "Log")
+  items[1] = Item(Sprite(0, 0, itemSheet), "Stick")
+  items[2] = Item(Sprite(1, 0, itemSheet), "Log")
 
   -- Objects
   objects = {}
-  objects[1] = Object:new(Sprite:new(0, 2, tileSheet), items[2], false)
+  objects[1] = Object(Sprite(0, 2, tileSheet), items[2], false)
   --objects[2] = getQuad(1, 2, tileSheet)
 
   -- Initalise the map
@@ -150,7 +198,7 @@ function love.load()
     map[x] = {}
     for y = 1, mapHeight do
       -- Background tile selection
-      map[x][y] = Tile:new(x, y, bgTiles[love.math.random(1, #bgTiles)])
+      map[x][y] = Tile(x, y, bgTiles[love.math.random(1, #bgTiles)])
 
       -- Object selection
       local num = love.math.random(-10, #objects)
@@ -167,13 +215,13 @@ function love.load()
     y = 1,
     moveCooldown = 0.2, -- In seconds
     moveTimer = 0,
-    img = love.graphics.newImage("assets/player.png"),
-    quad = nil,
+    sprite = AnimatedSprite(0, 0, playerSheet),
     breakMode = false,
     invOpen = false,
     inventory = {}
   }
-  player.quad = getQuad(0, 0, player.img)
+  player.sprite:addAnimation("idle", {{0, 0}, {1, 0}})
+  player.sprite.currentAnimation = "idle"
 
   for i = 1, 5 do
     player.inventory[i] = { item = nil, count = 0 }
@@ -213,6 +261,8 @@ function love.update(dt)
   end
 
   -- Player & camera movement
+  player.sprite:updateFrame(dt)
+
   playerXOffset = player.x - cameraX
   playerYOffset = player.y - cameraY
 
@@ -359,23 +409,23 @@ function love.draw()
       error()]]
       -- Draw background
       local bg = tile.background
-      love.graphics.draw(bg.sheet, bg.quad, (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+      bg:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
 
       -- Draw object
       local ob = tile.object
       if ob then
-        love.graphics.draw(ob.sprite.sheet, ob.sprite.quad, (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+        ob.sprite:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
       end
 
       -- Draw items
       for i, v in ipairs(tile.items) do
-        love.graphics.draw(v.sprite.sheet, v.sprite.quad, (x-1) * tileDisplaySize, (y-1) * tileDisplaySize, 0, tileScale, tileScale)
+        v.sprite:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
       end
     end
   end
 
   -- Draw player
-  love.graphics.draw(player.img, player.quad, (player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize, 0, tileScale, tileScale)
+  player.sprite:draw((player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize)
 
   if player.breakMode then
     -- Draw break halo
@@ -402,7 +452,7 @@ function love.draw()
       local slot = player.inventory[i]
       local item = slot.item
       if item then
-        love.graphics.draw(item.sprite.sheet, item.sprite.quad, sx+invPadding, sy+invPadding, 0, tileScale, tileScale)
+        item.sprite:draw(sx+invPadding, sy+invPadding)
         love.graphics.print(slot.count, sx, sy, 0, 1, 1)
       end
     end
