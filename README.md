@@ -5,7 +5,9 @@ Some little experiments with the [Love2D](https://love2d.org) game framework.
 - ~~Numbers in inventory~~ (Needs polish)
 - ~~Classes for items/blocks~~
 - Movement/scrolling should be smooth
-- ~~Character animations~~ and facing
+- ~~Sprite animations~~
+- Sprite flipping/facing
+- Walking animation tile images
 - Crafting system
 
 # Ideas

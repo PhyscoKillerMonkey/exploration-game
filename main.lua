@@ -213,6 +213,7 @@ function love.load()
   player = {
     x = 1,
     y = 1,
+    facing = 0,
     moveCooldown = 0.2, -- In seconds
     moveTimer = 0,
     sprite = AnimatedSprite(0, 0, playerSheet),
@@ -267,52 +268,68 @@ function love.update(dt)
   playerYOffset = player.y - cameraY
 
   if player.moveTimer >= player.moveCooldown and not player.breakMode then
-    if love.keyboard.isDown("up") and not checkCollision(0, -1) then
-      player.y = player.y - 1
-      if player.y < 1 then player.y = 1 end
+    if love.keyboard.isDown("up") then
+      if player.facing == 0 and not checkCollision(0, -1) then
+        player.y = player.y - 1
+        if player.y < 1 then player.y = 1 end
 
-      if playerYOffset <= 5 then cameraY = cameraY - 1 end
-      if cameraY < 1 then
-        cameraY = 1
+        if playerYOffset <= 5 then cameraY = cameraY - 1 end
+        if cameraY < 1 then
+          cameraY = 1
+        end
+        player.moveTimer = 0
+      elseif player.facing ~= 0 then
+        player.facing = 0
+        player.moveTimer = player.moveCooldown * 0.5
       end
-
-      player.moveTimer = 0
     end
 
-    if love.keyboard.isDown("right") and not checkCollision(1, 0) then
-      player.x = player.x + 1
-      if player.x > mapWidth then player.x = mapWidth end
+    if love.keyboard.isDown("right") then
+      if player.facing == 1 and not checkCollision(1, 0) then
+        player.x = player.x + 1
+        if player.x > mapWidth then player.x = mapWidth end
 
-      if playerXOffset >= 7 then cameraX = cameraX + 1 end
-      if cameraX > mapWidth+1 - visibleTilesWidth then
-        cameraX = mapWidth+1 - visibleTilesWidth
+        if playerXOffset >= 7 then cameraX = cameraX + 1 end
+        if cameraX > mapWidth+1 - visibleTilesWidth then
+          cameraX = mapWidth+1 - visibleTilesWidth
+        end
+        player.moveTimer = 0
+      elseif player.facing ~= 1 then
+        player.facing = 1
+        player.moveTimer = player.moveCooldown * 0.5
       end
-
-      player.moveTimer = 0
     end
 
-    if love.keyboard.isDown("down") and not checkCollision(0, 1) then
-      player.y = player.y + 1
-      if player.y > mapHeight then player.y = mapHeight end
+    if love.keyboard.isDown("down") then
+      if player.facing == 2 and not checkCollision(0, 1) then
+        player.y = player.y + 1
+        if player.y > mapHeight then player.y = mapHeight end
 
-      if playerYOffset >= 5 then cameraY = cameraY + 1 end
-      if cameraY > mapHeight+1 - visibleTilesHeight then
-        cameraY = mapHeight+1 - visibleTilesHeight
+        if playerYOffset >= 5 then cameraY = cameraY + 1 end
+        if cameraY > mapHeight+1 - visibleTilesHeight then
+          cameraY = mapHeight+1 - visibleTilesHeight
+        end
+        player.moveTimer = 0
+      elseif player.facing ~= 2 then
+        player.facing = 2
+        player.moveTimer = player.moveCooldown * 0.5
       end
-
-      player.moveTimer = 0
     end
 
-    if love.keyboard.isDown("left") and not checkCollision(-1, 0) then
-      player.x = player.x - 1
-      if player.x < 1 then player.x = 1 end
+    if love.keyboard.isDown("left") then
+      if player.facing == 3 and not checkCollision(-1, 0) then
+        player.x = player.x - 1
+        if player.x < 1 then player.x = 1 end
 
-      if playerXOffset <= 7 then cameraX = cameraX - 1 end
-      if cameraX < 1 then
-        cameraX = 1
+        if playerXOffset <= 7 then cameraX = cameraX - 1 end
+        if cameraX < 1 then
+          cameraX = 1
+        end
+        player.moveTimer = 0
+      elseif player.facing ~= 3 then
+        player.facing = 3
+        player.moveTimer = player.moveCooldown * 0.5
       end
-
-      player.moveTimer = 0
     end
   end
 
