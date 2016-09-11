@@ -96,27 +96,30 @@ createClass(AnimatedSprite, Sprite)
 function AnimatedSprite:new(x, y, sheet)
   Sprite:new(x, y, sheet)
   self.frameTimer = 0
-  self.frameDuration = 0.5
   self.currentAnimation = ""
   self.animationNames = {}
-  self.animations = {}
+  self.animationFrames = {}
+  self.animationDurations = {}
 end
-function AnimatedSprite:addAnimation(name, frames)
+function AnimatedSprite:addAnimation(name, frameDuration, frames)
   table.insert(self.animationNames, name)
-  self.animations[name] = {}
+  self.animationFrames[name] = {}
+  self.animationDurations[name] = frameDuration
   for i, v in ipairs(frames) do
-    table.insert(self.animations[name], getQuad(v[1], v[2], self.sheet))
+    table.insert(self.animationFrames[name], getQuad(v[1], v[2], self.sheet))
   end
 end
 function AnimatedSprite:updateFrame(dt)
-  if self.currentAnimation ~= "" then
+  local name = self.currentAnimation
+  if name ~= "" then
     self.frameTimer = self.frameTimer + dt
-    local a = self.animations[self.currentAnimation]
-    if self.frameTimer > self.frameDuration * #a then
+    local frames = self.animationFrames[name]
+    local duration = self.animationDurations[name]
+    if self.frameTimer > duration * #frames then
       self.frameTimer = 0.0001 -- Cant be 0 cause division by 0
     end
-    local frame = math.ceil(self.frameTimer / self.frameDuration)
-    self.quad = a[frame]
+    local frame = math.ceil(self.frameTimer / duration)
+    self.quad = frames[frame]
   else
     print("No animation assigned")
   end
@@ -221,8 +224,9 @@ function love.load()
     invOpen = false,
     inventory = {}
   }
-  player.sprite:addAnimation("idle", {{0, 0}, {1, 0}})
-  player.sprite.currentAnimation = "idle"
+  player.sprite:addAnimation("idle", 0.5, {{0, 0}, {1, 0}})
+  player.sprite:addAnimation("walk", 0.1, {{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}, {6, 1}, {7, 1}})
+  player.sprite.currentAnimation = "walk"
 
   for i = 1, 5 do
     player.inventory[i] = { item = nil, count = 0 }
