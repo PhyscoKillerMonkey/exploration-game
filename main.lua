@@ -217,8 +217,9 @@ function love.load()
     x = 1,
     y = 1,
     facing = 0,
-    moveCooldown = 0.2, -- In seconds
+    moveCooldown = 0.3, -- Seconds it takes to move 1 square
     moveTimer = 0,
+    turnTime = 0.1, -- Seconds before starting to walk
     sprite = AnimatedSprite(0, 0, playerSheet),
     breakMode = false,
     invOpen = false,
@@ -284,7 +285,7 @@ function love.update(dt)
         player.moveTimer = 0
       elseif player.facing ~= 0 then
         player.facing = 0
-        player.moveTimer = player.moveCooldown * 0.5
+        player.moveTimer = player.moveCooldown - player.turnTime
       end
     end
 
@@ -300,7 +301,7 @@ function love.update(dt)
         player.moveTimer = 0
       elseif player.facing ~= 1 then
         player.facing = 1
-        player.moveTimer = player.moveCooldown * 0.5
+        player.moveTimer = player.moveCooldown - player.turnTime
       end
     end
 
@@ -316,7 +317,7 @@ function love.update(dt)
         player.moveTimer = 0
       elseif player.facing ~= 2 then
         player.facing = 2
-        player.moveTimer = player.moveCooldown * 0.5
+        player.moveTimer = player.moveCooldown - player.turnTime
       end
     end
 
@@ -332,7 +333,7 @@ function love.update(dt)
         player.moveTimer = 0
       elseif player.facing ~= 3 then
         player.facing = 3
-        player.moveTimer = player.moveCooldown * 0.5
+        player.moveTimer = player.moveCooldown - player.turnTime
       end
     end
   end
