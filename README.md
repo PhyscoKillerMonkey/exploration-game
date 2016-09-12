@@ -6,9 +6,10 @@ Some little experiments with the [Love2D](https://love2d.org) game framework.
 - ~~Classes for items/blocks~~
 - Movement/scrolling should be smooth
 - ~~Sprite animations~~
-- Sprite flipping/facing
-- Walking animation tile images
+- ~~Sprite flipping/facing~~
+- Walking animation images
 - Crafting system
+- Movement animations stutter sometimes
 
 # Ideas
 - Multiple taps to break blocks, make block shake when being broken
