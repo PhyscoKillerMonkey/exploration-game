@@ -57,7 +57,7 @@ function love.keypressed(key, scancode, isrepeat)
 end
 
 function love.keyreleased(key)
-  love.keyboard.keysReleased[key] = false
+  love.keyboard.keysReleased[key] = true
 end
 
 function love.keyboard.updateKeys()
@@ -216,24 +216,25 @@ function love.load()
   player = {
     x = 8,
     y = 6,
+    moveStack = {},
     facing = 0,
     moving = false,
-    moveDuration = 0.3, -- Seconds it takes to move 1 square
-    turnTime = 0.1, -- Seconds before starting to walk
-    timer = 0,
+    moveCooldown = 0,
+    moveDuration = 0.31, -- Seconds it takes to move 1 square
+    turnDuration = 0.1, -- Seconds before starting to walk
     sprite = AnimatedSprite(0, 0, playerSheet),
     breakMode = false,
     invOpen = false,
     inventory = {}
   }
   player.sprite:addAnimation("idleD", 0.8, {{0, 0}, {1, 0}})
-  player.sprite:addAnimation("walkD", 0.2, {{0, 0}, {0, 1}, {0, 0}, {1, 1}})
+  player.sprite:addAnimation("walkD", 0.16, {{0, 1}, {0, 0}, {1, 1}, {0, 0}})
   player.sprite:addAnimation("idleR", 0.8, {{2, 0}, {3, 0}})
-  player.sprite:addAnimation("walkR", 0.2, {{2, 0}, {2, 1}, {2, 0}, {3, 1}})
+  player.sprite:addAnimation("walkR", 0.16, {{2, 1}, {2, 0}, {3, 1}, {2, 0}})
   player.sprite:addAnimation("idleU", 0.8, {{2, 0}, {3, 0}})
-  player.sprite:addAnimation("walkU", 0.2, {{2, 0}, {2, 1}, {2, 0}, {3, 1}})
+  player.sprite:addAnimation("walkU", 0.16, {{2, 1}, {2, 0}, {3, 1}, {2, 0}})
   player.sprite:addAnimation("idleL", 0.8, {{2, 2}, {3, 2}})
-  player.sprite:addAnimation("walkL", 0.2, {{2, 2}, {2, 3}, {2, 2}, {3, 3}})
+  player.sprite:addAnimation("walkL", 0.16, {{2, 3}, {2, 2}, {3, 3}, {2, 2}})
   player.sprite.currentAnimation = "idleU"
 
   for i = 1, 5 do
@@ -255,13 +256,10 @@ function checkCollision(xOff, yOff)
   x = player.x + (xOff or 0)
   y = player.y + (yOff or 0)
 
-  print("Checking colisioin for X: " .. x .. " y: " .. y)
-
   -- Check that isnt out of the map
   if x < 1 or x > mapWidth or y < 1 or y > mapHeight then return true end
 
   if map[x] then
-    print(map[x])
     local ob = map[x][y]
     if ob and ob.object then
       return true
@@ -271,8 +269,19 @@ function checkCollision(xOff, yOff)
   return false
 end
 
-function timeToMove()
-  return love.timer.getTime() - player.timer >= player.turnTime
+function checkStack(dir)
+  if love.keyboard.wasPressed(dir) then
+    table.insert(player.moveStack, dir)
+  end
+  if love.keyboard.wasReleased(dir) then
+    local i = 0
+    for k, v in ipairs(player.moveStack) do
+      if v == dir then
+        i = k
+      end
+    end
+    table.remove(player.moveStack, i)
+  end
 end
 
 
@@ -289,82 +298,82 @@ function love.update(dt)
   playerXOffset = player.x - cameraX
   playerYOffset = player.y - cameraY
 
-  if not player.moving then
-    if love.keyboard.isDown("up") then
+  checkStack("up")
+  checkStack("right")
+  checkStack("down")
+  checkStack("left")
+
+  player.moveCooldown = player.moveCooldown - dt
+  if player.moveCooldown <= 0 then
+    local dir = player.moveStack[#player.moveStack]
+    if dir == "up" then
       if player.facing ~= 0 then
         player.facing = 0
-        player.timer = love.timer.getTime()
-      elseif not checkCollision(0, -1) and timeToMove() then
+        player.moveCooldown = player.turnDuration
+        player.sprite.currentAnimation = "idleU"
+      elseif not checkCollision(0, -1) then
         player.y = player.y - 1
         if playerYOffset <= 5 then cameraY = cameraY - 1 end
         if cameraY < 1 then
           cameraY = 1
         end
-        player.moving = true
-        player.timer = love.timer.getTime()
+        player.moveCooldown = player.moveDuration
         player.sprite.currentAnimation = "walkU"
       end
-    end
 
-    if love.keyboard.isDown("right") then
+    elseif dir == "right" then
       if player.facing ~= 1 then
         player.facing = 1
-        player.timer = love.timer.getTime()
-      elseif not checkCollision(1, 0) and timeToMove() then
+        player.moveCooldown = player.turnDuration
+        player.sprite.currentAnimation = "idleR"
+      elseif not checkCollision(1, 0) then
         player.x = player.x + 1
         if playerXOffset >= 7 then cameraX = cameraX + 1 end
         if cameraX > mapWidth+1 - visibleTilesWidth then
           cameraX = mapWidth+1 - visibleTilesWidth
         end
-        player.moving = true
-        player.timer = love.timer.getTime()
+        player.moveCooldown = player.moveDuration
         player.sprite.currentAnimation = "walkR"
       end
-    end
 
-    if love.keyboard.isDown("down") then
+    elseif dir == "down" then
       if player.facing ~= 2 then
         player.facing = 2
-        player.timer = love.timer.getTime()
-      elseif not checkCollision(0, 1) and timeToMove() then
+        player.moveCooldown = player.turnDuration
+        player.sprite.currentAnimation = "idleD"
+      elseif not checkCollision(0, 1) then
         player.y = player.y + 1
         if playerYOffset >= 5 then cameraY = cameraY + 1 end
         if cameraY > mapHeight+1 - visibleTilesHeight then
           cameraY = mapHeight+1 - visibleTilesHeight
         end
-        player.moving = true
-        player.timer = love.timer.getTime()
+        player.moveCooldown = player.moveDuration
         player.sprite.currentAnimation = "walkD"
       end
-    end
 
-    if love.keyboard.isDown("left") then
+    elseif dir == "left" then
       if player.facing ~= 3 then
         player.facing = 3
-        player.timer = love.timer.getTime()
-      elseif not checkCollision(-1, 0) and timeToMove() then
+        player.moveCooldown = player.turnDuration
+        player.sprite.currentAnimation = "idleL"
+      elseif not checkCollision(-1, 0) then
         player.x = player.x - 1
         if playerXOffset <= 7 then cameraX = cameraX - 1 end
         if cameraX < 1 then
           cameraX = 1
         end
-        player.moving = true
-        player.timer = love.timer.getTime()
+        player.moveCooldown = player.moveDuration
         player.sprite.currentAnimation = "walkL"
       end
-    end
-  end
 
-  -- Check if player has moved one square
-  local t = love.timer.getTime() - player.timer
-  if t >= player.moveDuration then
-    player.moving = false
-    local dir = ""
-    if player.facing == 0 then dir = "U"
-    elseif player.facing == 1 then dir = "R"
-    elseif player.facing == 2 then dir = "D"
-    elseif player.facing == 3 then dir = "L" end
-    player.sprite.currentAnimation = "idle" .. dir
+    else
+      local a = ""
+      if player.facing == 0 then a = "idleU"
+      elseif player.facing == 1 then a = "idleR"
+      elseif player.facing == 2 then a = "idleD"
+      elseif player.facing == 3 then a = "idleL" end
+      player.sprite.currentAnimation = a
+    end
   end
 
   -- See if there is an item to pick up
