@@ -405,48 +405,35 @@ function love.update(dt)
     end
   end
 
-  -- Check if in break mode
-  if love.keyboard.isDown("x") then
-    player.breakMode = true
-  else
-    player.breakMode = false
+  -- Check if we should break a block
+  if love.keyboard.wasPressed("x") then
+    local bx = player.x
+    local by = player.y
+    if player.facing == 0 and player.y > 1 then
+      by = player.y - 1
+
+    elseif player.facing == 1 and player.x < mapWidth then
+      bx = player.x + 1
+
+    elseif player.facing == 2 and player.y < mapHeight then
+      by = player.y + 1
+
+    elseif player.facing == 3 and player.x > 1 then
+      bx = player.x - 1
+    end
+
+    print("Break " .. bx .. " " .. by)
+
+    local square = map[bx][by]
+    if square.object and square.object.onBreak then
+      table.insert(square.items, square.object.onBreak)
+      square.object = nil
+    end
   end
 
   -- Toggle inventory
   if love.keyboard.wasPressed("z") then
     player.invOpen = not player.invOpen
-  end
-
-  if player.breakMode then
-    local bx, by = 0
-
-    if love.keyboard.isDown("up") and player.y > 1 then
-      bx = player.x
-      by = player.y-1
-    end
-
-    if love.keyboard.isDown("right") and player.x < mapWidth then
-      bx = player.x+1
-      by = player.y
-    end
-
-    if love.keyboard.isDown("down") and player.y < mapHeight then
-      bx = player.x
-      by = player.y+1
-    end
-
-    if love.keyboard.isDown("left") and player.x > 1 then
-      bx = player.x-1
-      by = player.y
-    end
-
-    if bx > 0 and by > 0 then
-      local square = map[bx][by]
-      if square.object and square.object.onBreak then
-        table.insert(square.items, square.object.onBreak)
-        square.object = nil
-      end
-    end
   end
 
   -- Reset the key pressed/released lists
