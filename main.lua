@@ -1,155 +1,10 @@
-function print_r ( t )
-    local print_r_cache={}
-    local function sub_print_r(t,indent)
-        if (print_r_cache[tostring(t)]) then
-            print(indent.."*"..tostring(t))
-        else
-            print_r_cache[tostring(t)]=true
-            if (type(t)=="table") then
-                for pos,val in pairs(t) do
-                    if (type(val)=="table") then
-                        print(indent.."["..pos.."] => "..tostring(t).." {")
-                        sub_print_r(val,indent..string.rep(" ",string.len(pos)+8))
-                        print(indent..string.rep(" ",string.len(pos)+6).."}")
-                    elseif (type(val)=="string") then
-                        print(indent.."["..pos..'] => "'..val..'"')
-                    else
-                        print(indent.."["..pos.."] => "..tostring(val))
-                    end
-                end
-            else
-                print(indent..tostring(t))
-            end
-        end
-    end
-    if (type(t)=="table") then
-        print(tostring(t).." {")
-        sub_print_r(t,"  ")
-        print("}")
-    else
-        sub_print_r(t,"  ")
-    end
-    print()
-end
-table.print = print_r
+local util = require "util"
+table.print = util.printTable
+love.keyboard.wasPressed = util.wasPressed
+love.keyboard.wasReleased = util.wasReleased
+love.keyboard.updateKeys = util.updateKeys
 
--- KeyPressed and released detection
-love.keyboard.keysPressed = {}
-love.keyboard.keysReleased = {}
-
-function love.keyboard.wasPressed(key)
-  if love.keyboard.keysPressed[key] then
-    return true
-  end
-  return false
-end
-
-function love.keyboard.wasReleased(key)
-  if love.keyboard.keysReleased[key] then
-    return true
-  end
-  return false
-end
-
-function love.keypressed(key, scancode, isrepeat)
-  love.keyboard.keysPressed[key] = true
-end
-
-function love.keyreleased(key)
-  love.keyboard.keysReleased[key] = true
-end
-
-function love.keyboard.updateKeys()
-  love.keyboard.keysPressed = {}
-  love.keyboard.keysReleased = {}
-end
-
-
-
--- Class stuff
-function createClass(class, parent)
-  class.__index = class
-  parent = parent or child
-  setmetatable(class, {
-    __index = parent,
-    __call = function (cls, ...)
-      local self = setmetatable({}, cls)
-      self:new(...)
-      return self
-    end
-  })
-end
-
-local Sprite = {}
-createClass(Sprite)
-function Sprite:new(x, y, sheet)
-  self.sheet = sheet
-  self.quad = getQuad(x, y, sheet)
-end
-function Sprite:draw(x, y)
-  love.graphics.draw(self.sheet, self.quad, x, y, 0, tileScale, tileScale)
-end
-
-local AnimatedSprite = {}
-createClass(AnimatedSprite, Sprite)
-function AnimatedSprite:new(x, y, sheet)
-  Sprite:new(x, y, sheet)
-  self.frameTimer = 0
-  self.currentAnimation = ""
-  self.animationNames = {}
-  self.animationFrames = {}
-  self.animationDurations = {}
-end
-function AnimatedSprite:addAnimation(name, frameDuration, frames)
-  table.insert(self.animationNames, name)
-  self.animationFrames[name] = {}
-  self.animationDurations[name] = frameDuration
-  for i, v in ipairs(frames) do
-    table.insert(self.animationFrames[name], getQuad(v[1], v[2], self.sheet))
-  end
-end
-function AnimatedSprite:updateFrame(dt)
-  local name = self.currentAnimation
-  if name ~= "" then
-    self.frameTimer = self.frameTimer + dt
-    local frames = self.animationFrames[name]
-    local duration = self.animationDurations[name]
-    if self.frameTimer > duration * #frames then
-      self.frameTimer = 0.0001 -- Cant be 0 cause division by 0
-    end
-    local frame = math.ceil(self.frameTimer / duration)
-    self.quad = frames[frame]
-  else
-    print("No animation assigned")
-  end
-end
-
-Tile = {}
-createClass(Tile)
-function Tile:new(x, y, background)
-  self.x = x
-  self.y = y
-  self.background = background
-  self.object = nil
-  self.items = {}
-end
-
-Object = {}
-createClass(Object)
-function Object:new(sprite, onBreak, blocking)
-  self.sprite = sprite
-  self.onBreak = onBreak
-  self.blocking = blocking
-end
-
-Item = {}
-createClass(Item)
-function Item:new(sprite, name)
-  self.sprite = sprite
-  self.name = name
-end
-
-
+local c = require "classes"
 
 function love.load()
   -- Keeps everything nice and pixely
@@ -169,21 +24,21 @@ function love.load()
 
   -- Background tiles
   bgTiles = {}
-  bgTiles[1] = Sprite(0, 0, tileSheet)
-  bgTiles[2] = Sprite(1, 0, tileSheet)
-  bgTiles[3] = Sprite(2, 0, tileSheet)
-  bgTiles[4] = Sprite(3, 0, tileSheet)
-  bgTiles[5] = Sprite(4, 0, tileSheet)
-  bgTiles[6] = Sprite(5, 0, tileSheet)
+  bgTiles[1] = c.Sprite(0, 0, tileSheet)
+  bgTiles[2] = c.Sprite(1, 0, tileSheet)
+  bgTiles[3] = c.Sprite(2, 0, tileSheet)
+  bgTiles[4] = c.Sprite(3, 0, tileSheet)
+  bgTiles[5] = c.Sprite(4, 0, tileSheet)
+  bgTiles[6] = c.Sprite(5, 0, tileSheet)
 
   -- Items
   items = {}
-  items[1] = Item(Sprite(0, 0, itemSheet), "Stick")
-  items[2] = Item(Sprite(1, 0, itemSheet), "Log")
+  items[1] = c.Item(c.Sprite(0, 0, itemSheet), "Stick")
+  items[2] = c.Item(c.Sprite(1, 0, itemSheet), "Log")
 
   -- Objects
   objects = {}
-  objects[1] = Object(Sprite(0, 2, tileSheet), items[2], false)
+  objects[1] = c.Object(c.Sprite(0, 2, tileSheet), items[2], false)
   --objects[2] = getQuad(1, 2, tileSheet)
 
   -- Initalise the map
@@ -201,7 +56,7 @@ function love.load()
     map[x] = {}
     for y = 1, mapHeight do
       -- Background tile selection
-      map[x][y] = Tile(x, y, bgTiles[love.math.random(1, #bgTiles)])
+      map[x][y] = c.Tile(x, y, bgTiles[love.math.random(1, #bgTiles)])
 
       -- Object selection
       local num = love.math.random(-10, #objects)
@@ -227,7 +82,7 @@ function love.load()
     timer = 0,
     turnDuration = 0.1, -- Seconds before starting to walk
 
-    sprite = AnimatedSprite(0, 0, playerSheet),
+    sprite = c.AnimatedSprite(0, 0, playerSheet),
     breakMode = false,
     invOpen = false,
     inventory = {}
