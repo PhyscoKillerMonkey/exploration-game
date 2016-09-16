@@ -4,12 +4,12 @@ Some little experiments with the [Love2D](https://love2d.org) game framework.
 # To-do
 - ~~Numbers in inventory~~ (Needs polish)
 - ~~Classes for items/blocks~~
-- Movement/scrolling should be smooth
+- ~~Movement/scrolling should be smooth~~
 - ~~Sprite animations~~
 - ~~Sprite flipping/facing~~
-- Walking animation images
+- ~~Walking animation images~~
 - Crafting system
-- Movement animations stutter sometimes
+- Split up main.lua into modules
 
 # Ideas
 - Multiple taps to break blocks, make block shake when being broken

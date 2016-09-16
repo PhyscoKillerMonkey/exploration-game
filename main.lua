@@ -31,7 +31,6 @@ function print_r ( t )
     end
     print()
 end
-
 table.print = print_r
 
 -- KeyPressed and released detection
@@ -163,7 +162,10 @@ function love.load()
   tileSheet = love.graphics.newImage("assets/tiles.png")
   itemSheet = love.graphics.newImage("assets/items.png")
   playerSheet = love.graphics.newImage("assets/player.png")
+
   tileSize = 16
+  tileScale = 4
+  tileDisplaySize = tileSize * tileScale
 
   -- Background tiles
   bgTiles = {}
@@ -187,8 +189,6 @@ function love.load()
   -- Initalise the map
   mapWidth = 60
   mapHeight = 40
-
-  tileScale = 4
 
   visibleTilesWidth = 15
   visibleTilesHeight = 11
@@ -216,17 +216,120 @@ function love.load()
   player = {
     x = 8,
     y = 6,
-    moveStack = {},
     facing = 0,
-    moving = false,
-    moveCooldown = 0,
-    moveDuration = 0.31, -- Seconds it takes to move 1 square
+
+    offX = 0,
+    offY = 0,
+
+    moving = "none",
+    nextMove = "none",
+    lastMove = "none",
+    timer = 0,
     turnDuration = 0.1, -- Seconds before starting to walk
+
     sprite = AnimatedSprite(0, 0, playerSheet),
     breakMode = false,
     invOpen = false,
     inventory = {}
   }
+
+  function player:update(dt)
+    -- Update the turn timer
+    self.timer = self.timer - dt
+
+    for i, v in ipairs({"up", "right", "down", "left"}) do
+      if love.keyboard.wasPressed(v) then
+        self.lastMove = self.nextMove
+        self.nextMove = v
+        print(self.lastMove .. " " .. self.nextMove)
+      end
+      if love.keyboard.wasReleased(v) then
+        self.nextMove = self.lastMove
+        self.lastMove = "none"
+        print(self.lastMove .. " " .. self.nextMove)
+      end
+    end
+
+    if self.moving == "none" and self.nextMove ~= "none" then
+      if self.nextMove == "up" then
+        if self.facing ~= "up" then
+          self.timer = self.turnDuration
+          self.facing = "up"
+        elseif self.timer <= 0 and not checkCollision(0, -1) then
+          self.moving = "up"
+          self.y = self.y - 1
+          self.offY = 1
+        end
+
+      elseif self.nextMove == "right" then
+        if self.facing ~= "right" then
+          self.timer = self.turnDuration
+          self.facing = "right"
+        elseif self.timer <= 0 and not checkCollision(1, 0) then
+          self.moving = "right"
+          self.x = self.x + 1
+          self.offX = -1
+        end
+
+      elseif self.nextMove == "down" then
+        if self.facing ~= "down" then
+          self.timer = self.turnDuration
+          self.facing = "down"
+        elseif self.timer <= 0 and not checkCollision(0, 1) then
+          self.moving = "down"
+          self.y = self.y + 1
+          self.offY = -1
+        end
+
+      elseif self.nextMove == "left" then
+        if self.facing ~= "left" then
+          self.timer = self.turnDuration
+          self.facing = "left"
+        elseif self.timer <= 0 and not checkCollision(-1, 0) then
+          self.moving = "left"
+          self.x = self.x - 1
+          self.offX = 1
+        end
+      end
+    end
+
+    local step = 0.05
+    if self.moving == "up" then
+      self.offY = self.offY - step
+      self.sprite.currentAnimation = "walkU"
+      if self.offY <= 0 then self.moving = "none" end
+
+    elseif self.moving == "right" then
+      self.offX = self.offX + step
+      self.sprite.currentAnimation = "walkR"
+      if self.offX >= 0 then self.moving = "none" end
+
+    elseif self.moving == "down" then
+      self.offY = self.offY + step
+      self.sprite.currentAnimation = "walkD"
+      if self.offY >= 0 then self.moving = "none" end
+
+    elseif self.moving == "left" then
+      self.offX = self.offX - step
+      self.sprite.currentAnimation = "walkL"
+      if self.offX <= 0 then self.moving = "none" end
+
+    elseif self.moving == "none" then
+      self.offX = 0
+      self.offY = 0
+
+      if self.facing == "up" then
+        self.sprite.currentAnimation = "idleU"
+      elseif self.facing == "right" then
+        self.sprite.currentAnimation = "idleR"
+      elseif self.facing == "down" then
+        self.sprite.currentAnimation = "idleD"
+      elseif self.facing == "left" then
+        self.sprite.currentAnimation = "idleL"
+      end
+    end
+  end
+
   player.sprite:addAnimation("idleD", 0.8, {{0, 0}, {1, 0}})
   player.sprite:addAnimation("walkD", 0.16, {{0, 1}, {0, 0}, {1, 1}, {0, 0}})
   player.sprite:addAnimation("idleR", 0.8, {{2, 0}, {3, 0}})
@@ -269,21 +372,6 @@ function checkCollision(xOff, yOff)
   return false
 end
 
-function checkStack(dir)
-  if love.keyboard.wasPressed(dir) then
-    table.insert(player.moveStack, dir)
-  end
-  if love.keyboard.wasReleased(dir) then
-    local i = 0
-    for k, v in ipairs(player.moveStack) do
-      if v == dir then
-        i = k
-      end
-    end
-    table.remove(player.moveStack, i)
-  end
-end
-
 
 
 function love.update(dt)
@@ -292,88 +380,20 @@ function love.update(dt)
     love.event.push("quit")
   end
 
-  -- Player & camera movement
+  -- Player movement
   player.sprite:updateFrame(dt)
+  player:update(dt)
 
-  playerXOffset = player.x - cameraX
-  playerYOffset = player.y - cameraY
-
-  checkStack("up")
-  checkStack("right")
-  checkStack("down")
-  checkStack("left")
-
-  player.moveCooldown = player.moveCooldown - dt
-  if player.moveCooldown <= 0 then
-    local dir = player.moveStack[#player.moveStack]
-    if dir == "up" then
-      if player.facing ~= 0 then
-        player.facing = 0
-        player.moveCooldown = player.turnDuration
-        player.sprite.currentAnimation = "idleU"
-      elseif not checkCollision(0, -1) then
-        player.y = player.y - 1
-        if playerYOffset <= 5 then cameraY = cameraY - 1 end
-        if cameraY < 1 then
-          cameraY = 1
-        end
-        player.moveCooldown = player.moveDuration
-        player.sprite.currentAnimation = "walkU"
-      end
-
-    elseif dir == "right" then
-      if player.facing ~= 1 then
-        player.facing = 1
-        player.moveCooldown = player.turnDuration
-        player.sprite.currentAnimation = "idleR"
-      elseif not checkCollision(1, 0) then
-        player.x = player.x + 1
-        if playerXOffset >= 7 then cameraX = cameraX + 1 end
-        if cameraX > mapWidth+1 - visibleTilesWidth then
-          cameraX = mapWidth+1 - visibleTilesWidth
-        end
-        player.moveCooldown = player.moveDuration
-        player.sprite.currentAnimation = "walkR"
-      end
-
-    elseif dir == "down" then
-      if player.facing ~= 2 then
-        player.facing = 2
-        player.moveCooldown = player.turnDuration
-        player.sprite.currentAnimation = "idleD"
-      elseif not checkCollision(0, 1) then
-        player.y = player.y + 1
-        if playerYOffset >= 5 then cameraY = cameraY + 1 end
-        if cameraY > mapHeight+1 - visibleTilesHeight then
-          cameraY = mapHeight+1 - visibleTilesHeight
-        end
-        player.moveCooldown = player.moveDuration
-        player.sprite.currentAnimation = "walkD"
-      end
-
-    elseif dir == "left" then
-      if player.facing ~= 3 then
-        player.facing = 3
-        player.moveCooldown = player.turnDuration
-        player.sprite.currentAnimation = "idleL"
-      elseif not checkCollision(-1, 0) then
-        player.x = player.x - 1
-        if playerXOffset <= 7 then cameraX = cameraX - 1 end
-        if cameraX < 1 then
-          cameraX = 1
-        end
-        player.moveCooldown = player.moveDuration
-        player.sprite.currentAnimation = "walkL"
-      end
-
-    else
-      local a = ""
-      if player.facing == 0 then a = "idleU"
-      elseif player.facing == 1 then a = "idleR"
-      elseif player.facing == 2 then a = "idleD"
-      elseif player.facing == 3 then a = "idleL" end
-      player.sprite.currentAnimation = a
-    end
+  -- Position the camera correctly
+  if player.x >= 8 and player.x <= mapWidth - 7 then
+    cameraX = (player.x - 8 + player.offX) * tileDisplaySize
+    if cameraX < 0 then cameraX = 0 end
+    if cameraX > (mapWidth - 15) * tileDisplaySize then cameraX = (mapWidth - 15) * tileDisplaySize end
+  end
+  if player.y >= 6 and player.y <= mapHeight - 5 then
+    cameraY = (player.y - 6 + player.offY) * tileDisplaySize
+    if cameraY < 0 then cameraY = 0 end
+    if cameraY > (mapHeight - 11) * tileDisplaySize then cameraY = (mapHeight - 11) * tileDisplaySize end
   end
 
   -- See if there is an item to pick up
@@ -409,16 +429,16 @@ function love.update(dt)
   if love.keyboard.wasPressed("x") then
     local bx = player.x
     local by = player.y
-    if player.facing == 0 and player.y > 1 then
+    if player.facing == "up" and player.y > 1 then
       by = player.y - 1
 
-    elseif player.facing == 1 and player.x < mapWidth then
+    elseif player.facing == "right" and player.x < mapWidth then
       bx = player.x + 1
 
-    elseif player.facing == 2 and player.y < mapHeight then
+    elseif player.facing == "down" and player.y < mapHeight then
       by = player.y + 1
 
-    elseif player.facing == 3 and player.x > 1 then
+    elseif player.facing == "left" and player.x > 1 then
       bx = player.x - 1
     end
 
@@ -443,33 +463,34 @@ end
 
 
 function love.draw()
-  local tileDisplaySize = tileSize * tileScale
-
-  for x = 1, visibleTilesWidth do
-    for y = 1, visibleTilesHeight do
-      local tile = map[x+(cameraX-1)][y+(cameraY-1)]
+  for x = 1, mapWidth do
+    for y = 1, mapHeight do
+      local tile = map[x][y]
+      local drawX = (x-1) * tileDisplaySize - cameraX
+      local drawY = (y-1) * tileDisplaySize - cameraY
       --[[
       table.print(tile)
       error()]]
       -- Draw background
       local bg = tile.background
-      bg:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
+      bg:draw(drawX, drawY)
 
       -- Draw object
       local ob = tile.object
       if ob then
-        ob.sprite:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
+        ob.sprite:draw(drawX, drawY)
       end
 
       -- Draw items
       for i, v in ipairs(tile.items) do
-        v.sprite:draw((x-1) * tileDisplaySize, (y-1) * tileDisplaySize)
+        v.sprite:draw(drawX, drawY)
       end
     end
   end
 
   -- Draw player
-  player.sprite:draw((player.x-1-(cameraX-1)) * tileDisplaySize, (player.y-1-(cameraY-1)) * tileDisplaySize)
+  player.sprite:draw((player.x-1+player.offX) * tileDisplaySize - cameraX,
+  (player.y-1+player.offY) * tileDisplaySize - cameraY)
 
   if player.breakMode then
     -- Draw break halo
@@ -505,6 +526,7 @@ function love.draw()
   -- Write debug text
   love.graphics.print("PX: " .. player.x .. " PY: " .. player.y .. " SX: " .. cameraX .. " SY: " .. cameraY, 10, 10)
 
+  --[[
   local inv = "Inventory: "
   for i,v in ipairs(player.inventory) do
     if v.item then
@@ -514,4 +536,5 @@ function love.draw()
     end
   end
   love.graphics.print(inv, 10, 40)
+  --]]
 end
