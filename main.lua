@@ -318,8 +318,10 @@ end
 
 
 function love.draw()
-  for x = 1, mapWidth do
-    for y = 1, mapHeight do
+  local x = math.floor(cameraX / tileDisplaySize) + 1
+  local y = math.floor(cameraY / tileDisplaySize) + 1
+  for x = x, x + visibleTilesWidth do
+    for y = y, y + visibleTilesHeight do
       local tile = map[x][y]
       local drawX = (x-1) * tileDisplaySize - cameraX
       local drawY = (y-1) * tileDisplaySize - cameraY
