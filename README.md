@@ -10,6 +10,7 @@ Some little experiments with the [Love2D](https://love2d.org) game framework.
 - ~~Walking animation images~~
 - Crafting system
 - Split up main.lua into modules
+- Multi tile objects
 
 # Ideas
 - Multiple taps to break blocks, make block shake when being broken

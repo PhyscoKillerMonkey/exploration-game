@@ -40,8 +40,10 @@ function love.load()
 
   -- Objects
   objects = {}
-  objects[1] = c.Object(c.Sprite(0, 2, tileSheet), items[2], false)
-  --objects[2] = getQuad(1, 2, tileSheet)
+  objects[1] = c.Object(c.Sprite(0, 2, tileSheet), items[2], true)
+  objects[2] = c.Object(c.Sprite(1, 2, tileSheet), items[2], true)
+  objects[3] = c.Object(c.Sprite(4, 2, tileSheet), items[2], false)
+  objects[3.1] = c.Object(c.Sprite(4, 3, tileSheet), items[2], true)
 
   -- Initalise the map
   mapWidth = 60
@@ -59,11 +61,21 @@ function love.load()
     for y = 1, mapHeight do
       -- Background tile selection
       map[x][y] = c.Tile(x, y, bgTiles[love.math.random(1, #bgTiles)])
+    end
+  end
 
+  for x = 1, mapWidth do
+    for y = 1, mapHeight do
       -- Object selection
-      local num = love.math.random(-10, #objects)
-      if num > 0 then
+      local num = love.math.random(-20, #objects)
+      if num > 0 and map[x][y].object == nil then
         map[x][y].object = objects[num]
+        if num == 3 and y < mapHeight then
+          map[x][y+1].object = objects[3.1]
+          local xx, yy = x, y
+          map[x][y].links = {map[x][y+1]}
+          map[x][y+1].links = {map[x][y]}
+        end
       end
     end
   end
@@ -92,7 +104,7 @@ function checkCollision(xOff, yOff)
 
   if map[x] then
     local ob = map[x][y]
-    if ob and ob.object then
+    if ob and ob.object and ob.object.blocking then
       return true
     end
     return false
@@ -172,10 +184,20 @@ function love.update(dt)
 
     print("Break " .. bx .. " " .. by)
 
-    local square = map[bx][by]
-    if square.object and square.object.onBreak then
-      table.insert(square.items, square.object.onBreak)
-      square.object = nil
+    if map[bx][by].object then
+      local s = { map[bx][by] }
+      if s[1].links then
+        for i, v in ipairs(s[1].links) do
+          table.insert(s, v)
+        end
+      end
+
+      for i, v in ipairs(s) do
+        if v.object and v.object.onBreak then
+          table.insert(v.items, v.object.onBreak)
+          v.object = nil
+        end
+      end
     end
   end
 
@@ -193,17 +215,28 @@ end
 function love.draw()
   local x = math.floor(cameraX / tileDisplaySize) + 1
   local y = math.floor(cameraY / tileDisplaySize) + 1
+
   for x = x, x + visibleTilesWidth do
     for y = y, y + visibleTilesHeight do
       local tile = map[x][y]
       local drawX = (x-1) * tileDisplaySize - cameraX
       local drawY = (y-1) * tileDisplaySize - cameraY
-      --[[
-      table.print(tile)
-      error()]]
+
       -- Draw background
       local bg = tile.background
       bg:draw(drawX, drawY)
+    end
+  end
+
+  -- Draw player
+  player.sprite:draw((player.x-1+player.offX) * tileDisplaySize - cameraX,
+  (player.y-1+player.offY) * tileDisplaySize - cameraY)
+
+  for x = x, x + visibleTilesWidth do
+    for y = y, y + visibleTilesHeight do
+      local tile = map[x][y]
+      local drawX = (x-1) * tileDisplaySize - cameraX
+      local drawY = (y-1) * tileDisplaySize - cameraY
 
       -- Draw object
       local ob = tile.object
@@ -216,18 +249,6 @@ function love.draw()
         v.sprite:draw(drawX, drawY)
       end
     end
-  end
-
-  -- Draw player
-  player.sprite:draw((player.x-1+player.offX) * tileDisplaySize - cameraX,
-  (player.y-1+player.offY) * tileDisplaySize - cameraY)
-
-  if player.breakMode then
-    -- Draw break halo
-    love.graphics.rectangle("line", (player.x-cameraX) * tileDisplaySize, (player.y-cameraY-1) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
-    love.graphics.rectangle("line", (player.x-cameraX+1) * tileDisplaySize, (player.y-cameraY) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
-    love.graphics.rectangle("line", (player.x-cameraX) * tileDisplaySize, (player.y-cameraY+1) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
-    love.graphics.rectangle("line", (player.x-cameraX-1) * tileDisplaySize, (player.y-cameraY) * tileDisplaySize, tileDisplaySize, tileDisplaySize)
   end
 
   if player.invOpen then
