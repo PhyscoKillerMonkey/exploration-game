@@ -12,6 +12,9 @@ function love.load()
   -- Keeps everything nice and pixely
   love.graphics.setDefaultFilter("nearest")
 
+  -- Debug mode
+  debug = true
+
   -- Set the font
   love.graphics.setNewFont(20)
 
@@ -118,6 +121,11 @@ function love.update(dt)
   -- Exit on escape
   if love.keyboard.isDown("escape") then
     love.event.push("quit")
+  end
+
+  -- Check toggle debug
+  if love.keyboard.wasPressed("d") then
+    debug = not debug
   end
 
   -- Player movement
@@ -275,7 +283,9 @@ function love.draw()
   end
 
   -- Write debug text
-  love.graphics.print("PX: " .. player.x .. " PY: " .. player.y .. " SX: " .. cameraX .. " SY: " .. cameraY, 10, 10)
+  if debug then
+    love.graphics.print("PX: " .. player.x .. " PY: " .. player.y .. " SX: " .. cameraX .. " SY: " .. cameraY, 10, 10)
+  end
 
   --[[
   local inv = "Inventory: "

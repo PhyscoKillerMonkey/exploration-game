@@ -28,12 +28,12 @@ function player:update(dt)
     if love.keyboard.wasPressed(v) then
       self.lastMove = self.nextMove
       self.nextMove = v
-      print(self.lastMove .. " " .. self.nextMove)
+      --print(self.lastMove .. " " .. self.nextMove)
     end
     if love.keyboard.wasReleased(v) then
       self.nextMove = self.lastMove
       self.lastMove = "none"
-      print(self.lastMove .. " " .. self.nextMove)
+      --print(self.lastMove .. " " .. self.nextMove)
     end
   end
 
